@@ -17,216 +17,10 @@
 
 DOCUMENTATION = '''
 ---
-module: ntc_show_command
-short_description: Gets output from show commands using SSH and tries to return structured data
-description:
-    - This module connects to network devices using SSH and tries to
-      return structured data (JSON) using TextFSM templates. If a template
-      is not found, raw text is returned.  This module supports two drivers,
-      namely netmiko/SSH and trigger/SSH. This also support netmiko/Telnet for IOS devices.
-      Device support is dependent on netmiko and trigger.
-      The ability to return structured data is dependent on TextFSM templates.
-      You can still pass in optional param to the Trigger Commando init using the optional
-      args param which is a dictionary. Many other params can be defined in the Trigger netdevices
-      file when using trigger/SSH. Currently, this module requires passing in
-      un/pwd even when a Trigger .tacacsrc file exists.
-author: Jason Edelman (@jedelman8)
-requirements:
-    - netmiko
-    - textfsm
-    - terminal
-    - trigger
-options:
-    connection:
-        description:
-            - connect to device using netmiko or read from offline file
-              for testing.  ssh is the same as netmiko_ssh.
-        required: false
-        default: ssh
-        choices: ['ssh', 'offline', 'netmiko_ssh', 'trigger_ssh', 'netmiko_telnet', 'telnet']
-    connection_args:
-        description:
-            - Transport parameters specific to netmiko, trigger, etc.
-        required: false
-        default: {}
-    platform:
-        description:
-            - Platform FROM the index file
-        required: false
-    template_dir:
-        description:
-            - path where TextFSM templates are stored. Default path is ntc
-              with ntc in the same working dir as the playbook being run
-        required: false
-        default: "./ntc-templates/templates"
-    index_file:
-        description:
-            - name of index file.  file location must be relative to
-              the template_dir
-        required: false
-        default: index
-    use_templates:
-        description:
-            - Boolean true/false to enable/disable use of TextFSM templates for parsing
-        required: false
-        default: true
-        choices: ['true', 'false', 'yes', 'no']
-    local_file:
-        description:
-            - Specify local file to save raw output to
-        required: false
-        default: null
-    file:
-        description:
-            - If using connection=offline, this is the file (with path)
-              of a file that contains raw text output, i.e.
-              'show command' and then the contents of the file will
-              be rendered with the the TextFSM template
-        required: false
-        default: null
-    command:
-        description:
-            - Command to execute on target device
-        required: true
-    host:
-        description:
-            - IP Address or hostname (resolvable by Ansible control host)
-        required: false
-        default: null
-    provider:
-        description:
-          - Dictionary which acts as a collection of arguments used to define the characteristics
-            of how to connect to the device.
-            Note - host, username, password and platform must be defined in either provider
-            or local param
-            Note - local param takes precedence, e.g. hostname is preferred to provider['host']
-        required: false
-    port:
-        description:
-            - Port to use to connect to the target device
-        required: false
-        default: 22 for SSH. 23 for Telnet
-    delay:
-        description:
-            - Wait for command output from target device when using netmiko
-        required: false
-        default: 1
-    global_delay_factor:
-        description:
-            - Sets delay between operations.
-        required: false
-        default: 1
-        choices: []
-        aliases: []
-    username:
-        description:
-            - Username used to login to the target device
-        required: false
-        default: null
-    password:
-        description:
-            - Password used to login to the target device
-        required: false
-        default: null
-    secret:
-        description:
-            - Password used to enter a privileged mode on the target device when using netmiko
-        required: false
-        default: null
-    use_keys:
-        description:
-            - Boolean true/false if ssh key login should be attempted when nsing netmiko
-        required: false
-        default: false
-    key_file:
-        description:
-            - Path to private ssh key used for login when using netmiko
-        required: false
-        default: null
+
 '''
 EXAMPLES = '''
 
-vars:
-  nxos_provider:
-    host: "{{ inventory_hostname }}"
-    username: "ntc-ansible"
-    password: "ntc-ansible"
-    platform: "cisco_nxos"
-    connection: ssh
-
-# get vlan data using netmiko and provider
-- ntc_show_command:
-    connection=ssh
-    command='show vlan'
-    template_dir: '/home/ntc/ntc-templates/template'
-    provider: "{{ nxos_provider }}"
-
-# get snmp community using netmiko
-- ntc_show_command:
-    connection=ssh
-    platform=cisco_nxos
-    command='show snmp community'
-    template_dir: '/home/ntc/ntc-templates/template'
-    host={{ inventory_hostname }}
-    username={{ username }}
-    password={{ password }}
-    secret:{{ secret }}
-
-# FEEDING SINGLE DEVICE TO TRIGGER USING HOST PARAM
--  ntc_show_command:
-    connection: trigger_ssh
-    host: "{{ inventory_hostname }}"
-    platform: cisco_nxos
-    command: 'show version'
-    template_dir: '/home/ntc/ntc-templates/template'
-    username: "{{ username }}"
-    password: "{{ password }}"
-
-# FEEDING SINGLE DEVICE TO TRIGGER USING LIST
--  ntc_show_command:
-    connection: trigger_ssh
-    trigger_device_list:
-      - "{{ inventory_hostname }}"
-    platform: cisco_nxos
-    command: 'show version'
-    template_dir: '/home/ntc/ntc-templates/template'
-    username: "{{ username }}"
-    password: "{{ password }}"
-
-# FEEDING LIST OF DEVICES TO TRIGGER
-- ntc_show_command:
-    connection: trigger_ssh
-    trigger_device_list:
-      - n9k1
-      - n9k2
-    platform: cisco_nxos
-    command: 'show version'
-    template_dir: '/home/ntc/ntc-templates/template'
-    username: "{{ username }}"
-    password: "{{ password }}"
-  run_once: true
-
-# FEEDING SINGLE DEVICE TO NETIMKO
--  ntc_show_command:
-    connection: netmiko_ssh
-    platform: cisco_nxos
-    command: 'show version'
-    template_dir: '/home/ntc/ntc-templates/template'
-    host: "{{ inventory_hostname }}"
-    username: "{{ username }}"
-    password: "{{ password }}"
-
-# USING BASTION HOST WITH NETMIKO
-  - ntc_show_command:
-      connection: netmiko_ssh
-      platform: arista_eos
-      command: show ip interface brief
-      template_dir: '/home/ntc/ntc-templates/templates'
-      host: "{{inventory_hostname}}"
-      username: "{{ username }}"
-      password: "{{ password }}"
-      connection_args:
-        ssh_config_file: '/home/ntc/playbook/ssh_config'
 '''
 
 import os.path
@@ -250,12 +44,10 @@ except:
 
 HAS_TEXTFSM = True
 try:
-    from clitable import CliTableError
-    import clitable
+    import textfsm
 except:
     try:
-        from textfsm.clitable import CliTableError
-        import textfsm.clitable as clitable
+        import textfsm
     except:
         HAS_TEXTFSM = False
 
@@ -270,57 +62,40 @@ if HAS_NTC_TEMPLATES:
 else:
     NTC_TEMPLATES_DIR = 'ntc_templates/templates'
 
-def clitable_to_dict(cli_table):
-    """Converts TextFSM cli_table object to list of dictionaries
-    """
-    objs = []
-    for row in cli_table:
-        temp_dict = {}
-        for index, element in enumerate(row):
-            temp_dict[cli_table.header[index].lower()] = element
-        objs.append(temp_dict)
+def parse(template, raw_data):
+    re_table = textfsm.TextFSM(open(template))
+    data = re_table.ParseText(raw_data)
 
-    return objs
+    ar = []
+    for item in data:
+        obj = {}
+        for key, value in enumerate(item):
+            obj[re_table.header[key]] = value
+        ar.append(obj)
 
+    return ar
 
-def get_structured_data(rawoutput, module):
-    index_file = module.params['index_file']
-    template_dir = module.params['template_dir']
-    cli_table = clitable.CliTable(index_file, template_dir)
+def merge_by_attr(attrs, list1, list2):
+    merged = []
+    for item1 in list1:
+        for item2 in list2:
+            flag = True
+            for attr in attrs:
+                if item1[attr] != item2[attr]:
+                    flag = False
+                    break
+            if flag:
+                item1.update(item2)
+                merged.append(item1)
+                break
 
-    attrs = dict(
-        Command=module.params['command'],
-        Platform=module.params['platform']
-    )
-    try:
-        cli_table.ParseCmd(rawoutput, attrs)
-        structured_data = clitable_to_dict(cli_table)
-    except CliTableError as e:
-        # Invalid or Missing template
-        # module.fail_json(msg='parsing error', error=str(e))
-        # rather than fail, fallback to return raw text
-        structured_data = [rawoutput]
-
-    return structured_data
-
+    return merged
 
 def parse_raw_output(rawoutput, module):
-    """Returns a dict if using netmiko and list of dicts if using trigger
-    """
-    structured_data_response_list = []
-    structured_data = {}
-    if isinstance(rawoutput, dict):
-        for device, command_output in rawoutput.items():
+    res1 = parse(module.params['first_template_file'], rawoutput)
+    res2 = parse(module.params['second_template_file'], rawoutput)
 
-            raw_txt = command_output[module.params['command']]
-            sd = get_structured_data(raw_txt, module)
-            temp = dict(device=device, response=sd)
-            structured_data_response_list.append(temp)
-    else:
-        structured_data = get_structured_data(rawoutput, module)
-
-    return structured_data or structured_data_response_list
-
+    return merge_by_attr(['ONT_ID', 'PORT'], res1, res2)
 
 def main():
     connection_argument_spec = dict(
@@ -352,8 +127,8 @@ def main():
     base_argument_spec = dict(
         file=dict(required=False),
         local_file=dict(required=False),
-        index_file=dict(default='index'),
-        template_dir=dict(default=NTC_TEMPLATES_DIR),
+        first_template_file=dict(required=True),
+        second_template_file=dict(required=True),
         use_templates=dict(required=False, default=True, type='bool'),
         command=dict(required=True),
     )
@@ -368,6 +143,7 @@ def main():
         ),
         supports_check_mode=False
     )
+
     provider = module.params['provider'] or {}
 
     # allow local params to override provider
@@ -383,8 +159,6 @@ def main():
     device_type = platform.split('-')[0]
     raw_file = module.params['file']
     local_file = module.params['local_file']
-    index_file = module.params['index_file']
-    template_dir = module.params['template_dir']
     command = module.params['command']
     username = module.params['username']
     password = module.params['password']
@@ -433,17 +207,6 @@ def main():
 
     if connection == 'offline' and not raw_file:
         module.fail_json(msg='specifiy file if using connection=offline')
-
-    if template_dir.endswith('/'):
-        template_dir.rstrip('/')
-
-    if use_templates:
-        if not os.path.isfile(template_dir + '/' + index_file):
-            module.fail_json(msg='could not find or read index file')
-
-        if raw_file and not os.path.isfile(raw_file):
-            module.fail_json(msg='could not read raw text file')
-
 
     rawtxt = ''
     if connection in ['ssh', 'netmiko_ssh', 'netmiko_telnet', 'telnet']:
